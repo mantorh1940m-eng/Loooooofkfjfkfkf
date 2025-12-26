@@ -1,9 +1,9 @@
-const canvas = document.getElementById('gameCanvas');
+const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const mainMsg = document.getElementById('main-msg');
-const scoreDisplay = document.getElementById('scoreDisplay');
+const msg = document.getElementById('msg');
+const scoreEl = document.getElementById('score');
 
-// ضبط أبعاد الشاشة تلقائياً
+// إعدادات الشاشة
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -11,139 +11,151 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// إعدادات اللعبة المتطورة
-let gameState = 'START'; // START, PLAYING, GAMEOVER
+// متغيرات اللعبة
 let score = 0;
-let gameSpeed = 4;
-let gravity = 0.6;
+let gameSpeed = 5;
+let isPlaying = false;
 let obstacles = [];
+const gravity = 0.8;
 
+// كائن لوفي - رسم بكسلي
 const luffy = {
     x: 50,
     y: 0,
-    width: 50,
-    height: 60,
+    w: 60,
+    h: 70,
     dy: 0,
-    jumpForce: -15,
+    jumpForce: -16,
     grounded: false,
-    color: '#FF4500',
     
+    // خريطة بكسلات لوفي (1:أحمر، 2:بشرة، 3:أسود، 4:أزرق، 5:أصفر للقبعة)
+    pixelMap: [
+        [0,0,5,5,5,5,5,0,0],
+        [0,5,5,5,5,5,5,5,0],
+        [0,3,3,3,3,3,3,3,0],
+        [0,3,2,2,3,2,2,3,0],
+        [0,2,2,2,2,2,2,2,0],
+        [0,0,1,1,1,1,1,0,0],
+        [0,0,1,1,1,1,1,0,0],
+        [0,0,4,4,0,4,4,0,0],
+        [0,0,2,2,0,2,2,0,0]
+    ],
+
+    draw() {
+        const pSize = this.w / this.pixelMap[0].length;
+        this.pixelMap.forEach((row, ri) => {
+            row.forEach((p, ci) => {
+                if (p === 0) return;
+                ctx.fillStyle = ["", "#e74c3c", "#ffdbac", "#2d3436", "#2980b9", "#f1c40f"][p];
+                ctx.fillRect(this.x + ci * pSize, this.y + ri * pSize, pSize + 0.5, pSize + 0.5);
+            });
+        });
+    },
+
     update() {
-        let groundLevel = canvas.height - 50;
-        if (this.y + this.height < groundLevel) {
+        let ground = canvas.height - 60;
+        if (this.y + this.h < ground) {
             this.dy += gravity;
             this.grounded = false;
         } else {
             this.dy = 0;
             this.grounded = true;
-            this.y = groundLevel - this.height;
+            this.y = ground - this.h;
         }
         this.y += this.dy;
+        this.draw();
     },
-    
-    draw() {
-        ctx.fillStyle = this.color; // هنا تضع صورة لوفي
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "red";
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-        ctx.shadowBlur = 0;
-    },
-    
+
     jump() {
         if (this.grounded) this.dy = this.jumpForce;
     }
 };
 
-class Obstacle {
+// كلاس العوائق البكسلية (صخور)
+class Rock {
     constructor() {
-        this.width = 40 + Math.random() * 30;
-        this.height = 50 + Math.random() * 40;
+        this.w = 40 + Math.random() * 30;
+        this.h = 40;
         this.x = canvas.width;
-        this.y = canvas.height - 50 - this.height;
-        this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+        this.y = canvas.height - 60 - this.h;
     }
     draw() {
-        ctx.fillStyle = this.color;
-        ctx.roundRect(this.x, this.y, this.width, this.height, 10);
-        ctx.fill();
+        ctx.fillStyle = "#95a5a6";
+        ctx.fillRect(this.x, this.y, this.w, this.h); // صخرة بسيطة
+        ctx.fillStyle = "#7f8c8d";
+        ctx.fillRect(this.x + 5, this.y + 5, this.w - 10, 10);
     }
     update() {
         this.x -= gameSpeed;
+        this.draw();
     }
 }
 
-function handleInput() {
-    if (gameState === 'START' || gameState === 'GAMEOVER') {
-        resetGame();
+// التحكم باللمس والضغط
+function action() {
+    if (!isPlaying) {
+        start();
     } else {
         luffy.jump();
     }
 }
 
-// التحكم للجوال والكمبيوتر
-window.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(); }, {passive: false});
-window.addEventListener('mousedown', handleInput);
-window.addEventListener('keydown', (e) => { if(e.code === 'Space') handleInput(); });
+window.addEventListener('touchstart', (e) => { e.preventDefault(); action(); }, {passive: false});
+window.addEventListener('mousedown', action);
 
-function resetGame() {
+function start() {
     score = 0;
-    gameSpeed = 5;
+    gameSpeed = 6;
     obstacles = [];
-    luffy.y = 0;
-    gameState = 'PLAYING';
+    isPlaying = true;
     document.getElementById('ui').style.display = 'none';
-    animate();
+    loop();
 }
 
-function animate() {
-    if (gameState !== 'PLAYING') return;
-    
-    // خلفية ملونة متغيرة
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // رسم الأرضية
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-    
-    luffy.update();
-    luffy.draw();
+function loop() {
+    if (!isPlaying) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // إدارة العوائق
-    if (Math.random() < 0.015) {
-        if (obstacles.length === 0 || (canvas.width - obstacles[obstacles.length-1].x) > 300) {
-            obstacles.push(new Obstacle());
-        }
+    // رسم الخلفية (سماء وبحر)
+    let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "#2980b9");
+    gradient.addColorStop(1, "#6dd5fa");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // رسم الأرضية
+    ctx.fillStyle = "#f39c12";
+    ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+
+    luffy.update();
+
+    // ظهور العوائق
+    if (Math.random() < 0.02 && (obstacles.length === 0 || canvas.width - obstacles[obstacles.length-1].x > 350)) {
+        obstacles.push(new Rock());
     }
 
     obstacles.forEach((obs, i) => {
         obs.update();
-        obs.draw();
-
-        // كشف التصادم
-        if (luffy.x < obs.x + obs.width &&
-            luffy.x + luffy.width > obs.x &&
-            luffy.y < obs.y + obs.height &&
-            luffy.y + luffy.height > obs.y) {
-            
-            if (navigator.vibrate) navigator.vibrate(200); // اهتزاز الجوال
-            gameState = 'GAMEOVER';
-            document.getElementById('ui').style.display = 'block';
-            mainMsg.innerText = "خسرت! اضغط للبدء مجدداً";
+        // تصادم
+        if (luffy.x < obs.x + obs.w && luffy.x + luffy.w > obs.x && luffy.y < obs.y + obs.h && luffy.y + luffy.h > obs.y) {
+            gameOver();
         }
-
-        if (obs.x + obs.width < 0) {
+        // مسح العائق وزيادة النتيجة
+        if (obs.x + obs.w < 0) {
             obstacles.splice(i, 1);
             score++;
             gameSpeed += 0.1;
-            scoreDisplay.innerText = `Score: ${score}`;
+            scoreEl.innerText = score;
         }
     });
 
-    requestAnimationFrame(animate);
+    requestAnimationFrame(loop);
 }
 
-// البدء الأولي
-ctx.fillStyle = "#1a1a2e";
-ctx.fillRect(0, 0, canvas.width, canvas.height);
+function gameOver() {
+    isPlaying = false;
+    document.getElementById('ui').style.display = 'block';
+    msg.innerText = "لقد خسرت! النتيجة: " + score;
+    if (navigator.vibrate) navigator.vibrate(100);
+}
 
