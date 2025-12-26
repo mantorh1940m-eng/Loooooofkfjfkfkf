@@ -1,18 +1,29 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luffy: Pirate Run Evolution</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Luffy Pirate King - Mobile</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+        #ui {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-family: 'Arial', sans-serif; text-align: center;
+            pointer-events: none; z-index: 10;
+        }
+        .score-board { position: absolute; top: 20px; left: 20px; color: gold; font-size: 24px; font-weight: bold; }
+    </style>
 </head>
 <body>
-    <div id="game-wrapper">
-        <canvas id="gameCanvas"></canvas>
-        <div id="ui-layer">
-            <h1 id="msg">اضغط Space للبدء</h1>
-        </div>
+    <div id="ui">
+        <h1 id="main-msg">المغامرة تبدأ الآن!</h1>
+        <p>اضغط على الشاشة للقفز</p>
     </div>
-    <script src="script.js"></script>
+    <div class="score-board" id="scoreDisplay">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="game.js"></script>
 </body>
 </html>
+
